@@ -13,6 +13,11 @@ contract('Flight Surety Tests', async (accounts) => {
   /****************************************************************************************/
   /* Operations and Settings                                                              */
   /****************************************************************************************/
+  it(`is owner registered`, async function () {
+
+    let result = await config.flightSuretyData.isAirlineRegistered.call(config.owner);
+    assert.equal(result, true, "Owner is not registered");
+  });
 
   it(`(multiparty) has correct initial isOperational() value`, async function () {
 
@@ -83,12 +88,41 @@ contract('Flight Surety Tests', async (accounts) => {
     catch(e) {
 
     }
-    let result = await config.flightSuretyData.isAirline.call(newAirline); 
+    let result = await config.flightSuretyData.isAirlineRegistered.call(newAirline); 
 
     // ASSERT
     assert.equal(result, false, "Airline should not be able to register another airline if it hasn't provided funding");
 
   });
- 
+
+  it('(airline) can not be funded with less then 10 ether', async () => {
+
+        const fee = web3.utils.toWei('9', "ether");
+        let error;
+        try {
+            await config.flightSuretyApp.fundAirline(config.owner, { from: config.owner, value: fee });
+        }
+        catch (e) {
+            error = e;
+        }
+        let result = await config.flightSuretyData.isAirlineFunded.call(config.owner);
+        assert.notEqual(error, undefined, "Error must be thrown")
+        assert.isAbove(error.message.search("Airline can not be funded, Ether amount is not enough"), -1,
+            "Airline can not be funded, Ether amount is not enough");
+        assert.equal(result, false);
+    });
+
+    it('(airline) can be funded with 10 or more ether only', async () => {
+
+        const fee = web3.utils.toWei('10', "ether");
+        try {
+            await config.flightSuretyApp.fundAirline(config.owner, { from: config.owner, value: fee });
+        }
+        catch (e) {
+            console.log(e);
+        }
+        let result = await config.flightSuretyData.isAirlineFunded.call(config.owner);
+        assert.equal(result, true, "Airline should be funded");
+    });
 
 });
